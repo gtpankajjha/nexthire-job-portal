@@ -1,0 +1,106 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // -------------------------------------------------------------------------
+    // HELPER FUNCTIONS
+    // -------------------------------------------------------------------------
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'ADMIN';
+    }
+
+    // -------------------------------------------------------------------------
+    // USERS COLLECTION
+    // -------------------------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) 
+                    && request.resource.data.role in ['SEEKER', 'EMPLOYER'];
+      allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role) 
+                    || isAdmin();
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // COMPANIES COLLECTION
+    // -------------------------------------------------------------------------
+    match /companies/{companyId} {
+      // Anyone can read company profiles
+      allow read: if true;
+      
+      // Only employers can create a company profile, and they must own it
+      allow create: if isAuthenticated() 
+                    && getUserRole() == 'EMPLOYER' 
+                    && request.resource.data.employerId == request.auth.uid;
+                    
+      // Employers can update their own company profile
+      allow update: if isAuthenticated() 
+                    && resource.data.employerId == request.auth.uid
+                    && request.resource.data.employerId == request.auth.uid;
+                    
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // JOBS COLLECTION
+    // -------------------------------------------------------------------------
+    match /jobs/{jobId} {
+      allow read: if resource.data.status == 'ACTIVE' 
+                  || (isAuthenticated() && resource.data.employerId == request.auth.uid)
+                  || isAdmin();
+      allow create: if isAuthenticated() 
+                    && getUserRole() == 'EMPLOYER' 
+                    && request.resource.data.employerId == request.auth.uid;
+      allow update: if (isAuthenticated() && resource.data.employerId == request.auth.uid && request.resource.data.employerId == resource.data.employerId)
+                    || isAdmin();
+      allow delete: if (isAuthenticated() && resource.data.employerId == request.auth.uid)
+                    || isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // APPLICATIONS COLLECTION
+    // -------------------------------------------------------------------------
+    match /applications/{applicationId} {
+      allow read: if isAuthenticated() 
+                  && (resource.data.seekerId == request.auth.uid || resource.data.employerId == request.auth.uid)
+                  || isAdmin();
+      allow create: if isAuthenticated() 
+                    && getUserRole() == 'SEEKER' 
+                    && request.resource.data.seekerId == request.auth.uid
+                    && exists(/databases/$(database)/documents/jobs/$(request.resource.data.jobId))
+                    && get(/databases/$(database)/documents/jobs/$(request.resource.data.jobId)).data.employerId == request.resource.data.employerId
+                    && get(/databases/$(database)/documents/jobs/$(request.resource.data.jobId)).data.status == 'ACTIVE';
+      allow update: if isAuthenticated() 
+                    && resource.data.employerId == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // SAVED JOBS COLLECTION
+    // -------------------------------------------------------------------------
+    match /saved_jobs/{savedJobId} {
+      allow read: if isAuthenticated() 
+                  && resource.data.seekerId == request.auth.uid;
+      allow create: if isAuthenticated() 
+                    && getUserRole() == 'SEEKER' 
+                    && request.resource.data.seekerId == request.auth.uid
+                    && exists(/databases/$(database)/documents/jobs/$(request.resource.data.jobId));
+      allow update: if false;
+      allow delete: if isAuthenticated() 
+                    && resource.data.seekerId == request.auth.uid;
+    }
+  }
+}
