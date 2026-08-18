@@ -264,16 +264,16 @@ export const PostJob: React.FC = () => {
         <Card className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input label="Job Title *" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
-              <Input label="Location *" required value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} />
-              <Select label="Job Type *" required value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as JobType})} options={Object.values(JobType).map(t => ({value: t, label: t}))} />
-              <Select label="Work Mode *" required value={formData.mode} onChange={e => setFormData({...formData, mode: e.target.value as WorkMode})} options={Object.values(WorkMode).map(m => ({value: m, label: m}))} />
-              <Input label="Minimum Salary (INR) *" type="number" required value={formData.salaryMin} onChange={e => setFormData({...formData, salaryMin: Number(e.target.value)})} />
-              <Input label="Maximum Salary (INR) *" type="number" required value={formData.salaryMax} onChange={e => setFormData({...formData, salaryMax: Number(e.target.value)})} />
-              <Input label="Min Experience (Years) *" type="number" required value={formData.experienceMin} onChange={e => setFormData({...formData, experienceMin: Number(e.target.value)})} />
-              <Input label="Max Experience (Years) *" type="number" required value={formData.experienceMax} onChange={e => setFormData({...formData, experienceMax: Number(e.target.value)})} />
-              <Input label="Number of Openings *" type="number" required value={formData.openings} onChange={e => setFormData({...formData, openings: Number(e.target.value)})} />
-              <Input label="Required Skills (comma separated) *" required value={formData.skills} onChange={e => setFormData({...formData, skills: e.target.value})} placeholder="React, Node.js..." />
+               <Input label="Job Title *" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+  <Input label="Location *" required value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} />
+  <Select label="Job Type *" required value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as JobType})} options={Object.values(JobType).map(t => ({value: t, label: t}))} />
+  <Select label="Work Mode *" required value={formData.mode} onChange={e => setFormData({...formData, mode: e.target.value as WorkMode})} options={Object.values(WorkMode).map(m => ({value: m, label: m}))} />
+<Input label="Minimum Salary (INR) *" required value={formData.salaryMin} onChange={e => setFormData({...formData, salaryMin: e.target.value.replace(/\D/g, '')})} placeholder="e.g. 500000" />
+<Input label="Maximum Salary (INR) *" required value={formData.salaryMax} onChange={e => setFormData({...formData, salaryMax: e.target.value.replace(/\D/g, '')})} placeholder="e.g. 1000000" />
+<Input label="Min Experience (Years) *" required value={formData.experienceMin} onChange={e => setFormData({...formData, experienceMin: e.target.value.replace(/\D/g, '')})} placeholder="e.g. 2" />
+<Input label="Max Experience (Years) *" required value={formData.experienceMax} onChange={e => setFormData({...formData, experienceMax: e.target.value.replace(/\D/g, '')})} placeholder="e.g. 5" />
+  <Input label="Number of Openings *" type="number" required value={formData.openings} onChange={e => setFormData({...formData, openings: Number(e.target.value)})} />
+  <Input label="Required Skills (comma separated) *" required value={formData.skills} onChange={e => setFormData({...formData, skills: e.target.value})} placeholder="React, Node.js..." />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Job Description *</label>
