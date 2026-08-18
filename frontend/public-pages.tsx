@@ -7,6 +7,97 @@ import { Job, UserRole, JobType, WorkMode, ApplicationStatus } from './types';
 import { useAuth } from './App';
 import { CATEGORIES } from './mockData';
 
+// --- Filter Sidebar Component ---
+// Extracted outside of SearchPage to prevent remounting and focus loss on every keystroke
+interface FilterSidebarProps {
+  keyword: string;
+  onKeywordChange: (val: string) => void;
+  location: string;
+  onLocationChange: (val: string) => void;
+  minSalary: string;
+  onMinSalaryChange: (val: string) => void;
+  experience: string;
+  onExperienceChange: (val: string) => void;
+  type: string;
+  onTypeChange: (val: string) => void;
+  mode: string;
+  onModeChange: (val: string) => void;
+  clearFilters: () => void;
+  setIsMobileFiltersOpen?: (isOpen: boolean) => void;
+}
+
+const FilterSidebar: React.FC<FilterSidebarProps> = ({
+  keyword, onKeywordChange,
+  location, onLocationChange,
+  minSalary, onMinSalaryChange,
+  experience, onExperienceChange,
+  type, onTypeChange,
+  mode, onModeChange,
+  clearFilters, setIsMobileFiltersOpen
+}) => (
+  <div className="space-y-5">
+    {setIsMobileFiltersOpen && (
+      <div className="flex justify-between items-center md:hidden mb-4">
+        <h3 className="font-bold text-lg">Filters</h3>
+        <button onClick={() => setIsMobileFiltersOpen(false)}><X className="w-6 h-6 text-gray-500" /></button>
+      </div>
+    )}
+    
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+      <Input 
+        placeholder="Job title, skills, company" 
+        value={keyword} 
+        onChange={e => onKeywordChange(e.target.value)} 
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+      <Input 
+        placeholder="City, state, or remote" 
+        value={location} 
+        onChange={e => onLocationChange(e.target.value)} 
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Min Salary (INR)</label>
+      <Input 
+        type="number"
+        placeholder="e.g. 500000" 
+        value={minSalary} 
+        onChange={e => onMinSalaryChange(e.target.value)} 
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Your Experience (Years)</label>
+      <Input 
+        type="number"
+        step="any"
+        placeholder="e.g. 4" 
+        value={experience} 
+        onChange={e => onExperienceChange(e.target.value)} 
+      />
+    </div>
+    <div>
+      <Select 
+        label="Job Type"
+        value={type}
+        onChange={e => onTypeChange(e.target.value)}
+        options={Object.values(JobType).map(t => ({ value: t, label: t }))}
+      />
+    </div>
+    <div>
+      <Select 
+        label="Work Mode"
+        value={mode}
+        onChange={e => onModeChange(e.target.value)}
+        options={Object.values(WorkMode).map(m => ({ value: m, label: m }))}
+      />
+    </div>
+    <Button variant="outline" className="w-full mt-4" onClick={clearFilters}>Clear All Filters</Button>
+  </div>
+);
+
 // --- Home Page ---
 export const HomePage: React.FC = () => {
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
@@ -94,12 +185,13 @@ export const SearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const { user } = useAuth();
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
 
   // Extract params
-  const keyword = searchParams.get('keyword') || '';
+  const keywordParam = searchParams.get('keyword') || '';
   const location = searchParams.get('location') || '';
   const type = searchParams.get('type') || '';
   const mode = searchParams.get('mode') || '';
@@ -107,10 +199,38 @@ export const SearchPage: React.FC = () => {
   const experience = searchParams.get('experience') || '';
   const sort = searchParams.get('sort') || 'newest';
 
+  // Local state for keyword to prevent typing lag and debounce the search
+  const [localKeyword, setLocalKeyword] = useState(keywordParam);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      if (value) newParams.set(key, value);
+      else newParams.delete(key);
+      return newParams;
+    });
+  };
+
+  // Debounce keyword changes to URL (350ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localKeyword !== keywordParam) {
+        setSearchParams(prev => {
+          const newParams = new URLSearchParams(prev);
+          if (localKeyword) newParams.set('keyword', localKeyword);
+          else newParams.delete('keyword');
+          return newParams;
+        });
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [localKeyword, keywordParam, setSearchParams]);
+
   useEffect(() => {
     const fetchJobs = async () => {
       setLoading(true);
-      const filters = { keyword, location, type, mode, minSalary, experience, sort };
+      // Use keywordParam here so it only fetches when the URL actually updates (after debounce)
+      const filters = { keyword: keywordParam, location, type, mode, minSalary, experience, sort };
       const results = await jobService.getJobs(filters);
       setJobs(results);
       
@@ -119,19 +239,14 @@ export const SearchPage: React.FC = () => {
         setSavedJobIds(new Set(saved.map(j => j.id)));
       }
       setLoading(false);
+      setIsInitialLoad(false);
     };
     fetchJobs();
-  }, [keyword, location, type, mode, minSalary, experience, sort, user]);
-
-  const handleFilterChange = (key: string, value: string) => {
-    const newParams = new URLSearchParams(searchParams);
-    if (value) newParams.set(key, value);
-    else newParams.delete(key);
-    setSearchParams(newParams);
-  };
+  }, [keywordParam, location, type, mode, minSalary, experience, sort, user]);
 
   const clearFilters = () => {
     setSearchParams(new URLSearchParams());
+    setLocalKeyword('');
     setIsMobileFiltersOpen(false);
   };
 
@@ -146,75 +261,15 @@ export const SearchPage: React.FC = () => {
     });
   };
 
-  const FilterContent = () => (
-    <div className="space-y-5">
-      <div className="flex justify-between items-center md:hidden mb-4">
-        <h3 className="font-bold text-lg">Filters</h3>
-        <button onClick={() => setIsMobileFiltersOpen(false)}><X className="w-6 h-6 text-gray-500" /></button>
-      </div>
-      
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
-        <Input 
-          placeholder="Job title, skills, company" 
-          value={keyword} 
-          onChange={e => handleFilterChange('keyword', e.target.value)} 
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-        <Input 
-          placeholder="City, state, or remote" 
-          value={location} 
-          onChange={e => handleFilterChange('location', e.target.value)} 
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Min Salary (INR)</label>
-        <Input 
-          type="number"
-          placeholder="e.g. 500000" 
-          value={minSalary} 
-          onChange={e => handleFilterChange('minSalary', e.target.value)} 
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Your Experience (Years)</label>
-        <Input 
-          type="number"
-          placeholder="e.g. 3" 
-          value={experience} 
-          onChange={e => handleFilterChange('experience', e.target.value)} 
-        />
-      </div>
-      <div>
-        <Select 
-          label="Job Type"
-          value={type}
-          onChange={e => handleFilterChange('type', e.target.value)}
-          options={Object.values(JobType).map(t => ({ value: t, label: t }))}
-        />
-      </div>
-      <div>
-        <Select 
-          label="Work Mode"
-          value={mode}
-          onChange={e => handleFilterChange('mode', e.target.value)}
-          options={Object.values(WorkMode).map(m => ({ value: m, label: m }))}
-        />
-      </div>
-      <Button variant="outline" className="w-full mt-4" onClick={clearFilters}>Clear All Filters</Button>
-    </div>
-  );
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
       {/* Mobile Header & Filter Toggle */}
       <div className="md:hidden flex flex-col gap-4 mb-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-900">
-            {loading ? 'Searching...' : `${jobs.length} Jobs Found`}
+          <h1 className="text-xl font-bold text-gray-900 flex items-center">
+            {!isInitialLoad ? `${jobs.length} Jobs Found` : 'Searching...'}
+            {!isInitialLoad && loading && <Loader2 className="w-4 h-4 ml-2 animate-spin text-primary-600" />}
           </h1>
           <Button variant="outline" size="sm" onClick={() => setIsMobileFiltersOpen(true)}>
             <SlidersHorizontal className="w-4 h-4 mr-2" /> Filters
@@ -234,13 +289,27 @@ export const SearchPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-[256px_minmax(0,1fr)] gap-8 w-full">
         
         {/* Desktop Sidebar */}
-        <aside className="hidden md:block w-64 flex-shrink-0">
+        <aside className="hidden md:block w-full">
           <Card className="p-5 sticky top-24">
             <h3 className="font-semibold text-gray-900 mb-4 flex items-center"><Filter className="w-4 h-4 mr-2" /> Filters</h3>
-            <FilterContent />
+            <FilterSidebar 
+              keyword={localKeyword}
+              onKeywordChange={setLocalKeyword}
+              location={location}
+              onLocationChange={val => handleFilterChange('location', val)}
+              minSalary={minSalary}
+              onMinSalaryChange={val => handleFilterChange('minSalary', val)}
+              experience={experience}
+              onExperienceChange={val => handleFilterChange('experience', val)}
+              type={type}
+              onTypeChange={val => handleFilterChange('type', val)}
+              mode={mode}
+              onModeChange={val => handleFilterChange('mode', val)}
+              clearFilters={clearFilters}
+            />
           </Card>
         </aside>
 
@@ -249,18 +318,34 @@ export const SearchPage: React.FC = () => {
           <div className="fixed inset-0 z-50 flex md:hidden">
             <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setIsMobileFiltersOpen(false)}></div>
             <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white p-6 overflow-y-auto">
-              <FilterContent />
+              <FilterSidebar 
+                keyword={localKeyword}
+                onKeywordChange={setLocalKeyword}
+                location={location}
+                onLocationChange={val => handleFilterChange('location', val)}
+                minSalary={minSalary}
+                onMinSalaryChange={val => handleFilterChange('minSalary', val)}
+                experience={experience}
+                onExperienceChange={val => handleFilterChange('experience', val)}
+                type={type}
+                onTypeChange={val => handleFilterChange('type', val)}
+                mode={mode}
+                onModeChange={val => handleFilterChange('mode', val)}
+                clearFilters={clearFilters}
+                setIsMobileFiltersOpen={setIsMobileFiltersOpen}
+              />
             </div>
           </div>
         )}
 
         {/* Results Area */}
-        <div className="flex-1">
+        <div className="min-w-0 w-full">
           
           {/* Desktop Header */}
           <div className="hidden md:flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {loading ? 'Searching...' : `${jobs.length} Jobs Found`}
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+              {!isInitialLoad ? `${jobs.length} Jobs Found` : 'Searching...'}
+              {!isInitialLoad && loading && <Loader2 className="w-5 h-5 ml-3 animate-spin text-primary-600" />}
             </h1>
             <div className="flex items-center gap-3">
               <span className="text-sm text-gray-500">Sort by:</span>
@@ -277,48 +362,50 @@ export const SearchPage: React.FC = () => {
           </div>
 
           {/* Job List */}
-          {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3, 4].map(i => (
-                <Card key={i} className="p-6 animate-pulse">
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 bg-gray-200 rounded"></div>
-                    <div className="flex-1">
-                      <div className="h-6 bg-gray-200 rounded w-1/3 mb-3"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-                      <div className="flex gap-4">
-                        <div className="h-4 bg-gray-200 rounded w-20"></div>
-                        <div className="h-4 bg-gray-200 rounded w-20"></div>
-                        <div className="h-4 bg-gray-200 rounded w-20"></div>
+          <div className="w-full">
+            {isInitialLoad ? (
+              <div className="space-y-4">
+                {[1, 2, 3, 4].map(i => (
+                  <Card key={i} className="p-6 animate-pulse">
+                    <div className="flex gap-4">
+                      <div className="w-12 h-12 bg-gray-200 rounded"></div>
+                      <div className="flex-1">
+                        <div className="h-6 bg-gray-200 rounded w-1/3 mb-3"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+                        <div className="flex gap-4">
+                          <div className="h-4 bg-gray-200 rounded w-20"></div>
+                          <div className="h-4 bg-gray-200 rounded w-20"></div>
+                          <div className="h-4 bg-gray-200 rounded w-20"></div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : jobs.length > 0 ? (
-            <div className="space-y-4">
-              {jobs.map(job => (
-                <JobCard 
-                  key={job.id} 
-                  job={job} 
-                  onSave={user?.role === UserRole.SEEKER ? () => handleSaveJob(job.id) : undefined}
-                  isSaved={savedJobIds.has(job.id)}
-                />
-              ))}
-            </div>
-          ) : (
-            <Card className="p-16 text-center flex flex-col items-center justify-center">
-              <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                <Search className="w-10 h-10 text-gray-400" />
+                  </Card>
+                ))}
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">No jobs found</h3>
-              <p className="text-gray-500 max-w-md mx-auto mb-6">
-                We couldn't find any jobs matching your current search criteria. Try adjusting your filters or searching with different keywords.
-              </p>
-              <Button variant="outline" onClick={clearFilters}>Clear All Filters</Button>
-            </Card>
-          )}
+            ) : jobs.length > 0 ? (
+              <div className="space-y-4">
+                {jobs.map(job => (
+                  <JobCard 
+                    key={job.id} 
+                    job={job} 
+                    onSave={user?.role === UserRole.SEEKER ? () => handleSaveJob(job.id) : undefined}
+                    isSaved={savedJobIds.has(job.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card className="w-full p-16 text-center flex flex-col items-center justify-center">
+                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <Search className="w-10 h-10 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No jobs found</h3>
+                <p className="text-gray-500 max-w-md mx-auto mb-6">
+                  We couldn't find any jobs matching your current search criteria. Try adjusting your filters or searching with different keywords.
+                </p>
+                <Button variant="outline" onClick={clearFilters}>Clear All Filters</Button>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>
