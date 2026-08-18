@@ -1,21 +1,19 @@
-# NextHire - Job Search & Discovery Report
+# NextHire - Search Page Layout Fix Report
 
 ## 1. Files Changed
-*   `services.ts`: Updated `jobService.getJobs` to handle new filters (`minSalary`, `experience`) and sorting (`salary-desc`, `salary-asc`, `newest`).
-*   `public-pages.tsx`: Updated `SearchPage` to include new filter inputs, a mobile-responsive filter sidebar, sorting dropdown, and a polished "No jobs found" empty state.
+*   `public-pages.tsx`
 
-## 2. Firestore Queries & Indexes Required
-*   **Queries:** The Firestore query remains highly optimized. It uses `where` clauses for exact matches (`status`, `employerId`, `type`, `mode`) to fetch a minimal dataset.
-*   **In-Memory Filtering:** Because Firestore does not support native full-text search or multiple inequality filters across different fields (e.g., `salaryMax >= X` AND `experienceMin <= Y`), the application performs these specific range and text filters in-memory *after* fetching the active jobs. This is the standard and recommended approach for Firebase web apps without a dedicated search backend like Algolia.
-*   **Indexes:** No new Firestore indexes are required for this update. The existing indexes for `status` and `createdAt` are sufficient.
+## 2. Summary of Changes
 
-## 3. Firebase Console Steps Required
-*   None. The existing security rules and indexes fully support this update.
+### A. Stable CSS Grid Layout
+*   **Root Cause:** The previous layout used nested flexbox containers (`flex flex-col md:flex-row gap-8 w-full`). When the results area switched from displaying job cards to the "No jobs found" empty state, the empty state container did not have the same flex-grow/width properties, causing the flex container to collapse and the sidebar to shift horizontally.
+*   **Fix:** Replaced the flexbox layout with a strict CSS Grid: `grid grid-cols-1 md:grid-cols-[256px_minmax(0,1fr)] gap-8 w-full`.
+    *   `256px` strictly locks the sidebar width to exactly 256px (equivalent to Tailwind's `w-64`).
+    *   `minmax(0,1fr)` forces the results column to take up exactly the remaining space, regardless of whether its children are wide job cards or a narrow empty state.
 
-## 4. How to Test
-1.  **Search by Keyword:** Type a job title, company name, or skill (e.g., "React") into the search bar. The results will filter instantly.
-2.  **Filter by Salary:** Enter a minimum salary (e.g., `500000`). Only jobs offering a maximum salary equal to or greater than this amount will appear.
-3.  **Filter by Experience:** Enter your years of experience (e.g., `3`). Only jobs requiring 3 years or less minimum experience will appear.
-4.  **Sorting:** Use the "Sort by" dropdown in the top right to sort results by Newest, Salary (High to Low), or Salary (Low to High).
-5.  **Mobile Responsiveness:** Shrink your browser window. The sidebar will disappear, and a "Filters" button will appear next to the result count. Clicking it opens a mobile-friendly filter modal.
-6.  **Empty State:** Enter a keyword that doesn't exist (e.g., "Astronaut"). A professional "No jobs found" card will appear with a "Clear All Filters" button.
+### B. Empty State Width Fix
+*   **Root Cause:** The empty state `<Card>` was only as wide as its internal content (the icon and text).
+*   **Fix:** Added `w-full` to the empty state `<Card>` component and wrapped the conditional rendering block in a `<div className="w-full">`. This ensures the empty state stretches to fill the entire `minmax(0,1fr)` grid column, perfectly matching the width of the normal job results.
+
+### C. Results Column Overflow Prevention
+*   **Fix:** Added `min-w-0` to the results column wrapper (`<div className="min-w-0 w-full">`). This is a standard CSS Grid technique to prevent flex/grid children from overflowing their tracks when content is too wide, ensuring the layout remains perfectly stable.
