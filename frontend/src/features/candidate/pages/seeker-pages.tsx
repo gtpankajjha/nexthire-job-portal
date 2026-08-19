@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { User, FileText, Bookmark, Upload, CheckCircle, Loader2 } from 'lucide-react';
-import { Button, Input, Card, Badge, JobCard, useToast, Select, ResumeViewerButton } from './ui-components';
-import { DashboardLayout } from './layout';
-import { useAuth } from './src/features/auth/context/AuthContext';
-import { applicationService, savedJobService, authService, storageService } from './services';
-import { Application, Job, WorkMode } from './types';
-import { SeekerApplicationCard } from './src/features/candidate/components/SeekerApplicationCard';
+import { Button, Input, Card, Badge, JobCard, useToast, Select, ResumeViewerButton } from '../../../../ui-components';
+import { DashboardLayout } from '../../../../layout';
+import { useAuth } from '../../auth/context/AuthContext';
+import { applicationService, savedJobService, authService, storageService } from '../../../../services';
+import { Application, Job, WorkMode } from '../../../../types';
+import { SeekerApplicationCard } from '../components/SeekerApplicationCard';
 
 const sidebarLinks = [
   { to: '/seeker/profile', icon: User, label: 'My Profile' },

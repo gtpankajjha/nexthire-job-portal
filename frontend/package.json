@@ -9,15 +9,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "firebase": "latest",
+    "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
     "react-router-dom": "latest",
-    "lucide-react": "latest",
-    "recharts": "latest",
-    "firebase": "latest"
+    "recharts": "latest"
   },
   "devDependencies": {
     "@types/node": "latest",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "latest",
     "typescript": "latest",
     "vite": "latest"

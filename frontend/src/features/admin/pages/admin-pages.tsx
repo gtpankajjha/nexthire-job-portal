@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Users, Briefcase, ShieldAlert } from 'lucide-react';
-import { Card, Badge } from './ui-components';
-import { DashboardLayout } from './layout';
-import { jobService } from './services';
-import { Job, User } from './types';
+import { Card, Badge } from '../../../../ui-components';
+import { DashboardLayout } from '../../../../layout';
+import { jobService } from '../../../../services';
+import { Job, User } from '../../../../types';
 
 const sidebarLinks = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Overview' },

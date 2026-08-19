@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { LayoutDashboard, Briefcase, Users, PlusCircle, Edit, Eye, MoreVertical, Building, MapPin, FileText } from 'lucide-react';
-import { Button, Input, Card, Badge, Select, useToast, formatINR, ResumeViewerButton } from './ui-components';
-import { DashboardLayout } from './layout';
-import { useAuth } from './src/features/auth/context/AuthContext';
-import { jobService, applicationService, companyService } from './services';
-import { Job, Application, JobType, WorkMode, JobStatus, ApplicationStatus, User, Company } from './types';
+import { Button, Input, Card, Badge, Select, useToast, formatINR, ResumeViewerButton } from '../../../../ui-components';
+import { DashboardLayout } from '../../../../layout';
+import { useAuth } from '../../auth/context/AuthContext';
+import { jobService, applicationService, companyService } from '../../../../services';
+import { Job, Application, JobType, WorkMode, JobStatus, ApplicationStatus, User, Company } from '../../../../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ApplicantProfileModal } from './src/features/employer/components/ApplicantProfileModal';
+import { ApplicantProfileModal } from '../components/ApplicantProfileModal';
 
 const sidebarLinks = [
   { to: '/employer/dashboard', icon: LayoutDashboard, label: 'Dashboard' },

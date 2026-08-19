@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Search, MapPin, Briefcase, Building, DollarSign, Clock, ChevronRight, CheckCircle, Filter, Loader2, SlidersHorizontal } from 'lucide-react';
-import { Button, Input, Card, Badge, JobCard, useToast, Select, Modal, formatINR } from './ui-components';
-import { jobService, authService, applicationService, savedJobService } from './services';
-import { Job, UserRole, JobType, WorkMode, ApplicationStatus } from './types';
-import { useAuth } from './src/features/auth/context/AuthContext';
-import { CATEGORIES } from './mockData';
-import { JobFilters } from './src/features/jobs/components/JobFilters';
+import { Button, Input, Card, Badge, JobCard, useToast, Select, Modal, formatINR } from '../../../../ui-components';
+import { jobService, authService, applicationService, savedJobService } from '../../../../services';
+import { Job, UserRole, JobType, WorkMode, ApplicationStatus } from '../../../../types';
+import { useAuth } from '../../auth/context/AuthContext';
+import { CATEGORIES } from '../../../../mockData';
+import { JobFilters } from '../components/JobFilters';
 
 // --- Home Page ---
 export const HomePage: React.FC = () => {
