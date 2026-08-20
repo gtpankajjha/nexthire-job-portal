@@ -3,10 +3,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // -------------------------------------------------------------------------
-    // HELPER FUNCTIONS
-    // -------------------------------------------------------------------------
-
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -25,74 +21,53 @@ service cloud.firestore {
       return isAuthenticated() && getUserRole() == 'ADMIN';
     }
 
-
     // -------------------------------------------------------------------------
-    // USERS COLLECTION
+    // USERS
     // -------------------------------------------------------------------------
-
     match /users/{userId} {
 
-      // Keep this for now because the employer applicant flow
-      // may need to read candidate profile information.
+      // Kept unchanged for now because employers need candidate
+      // profile information in the applicant flow.
       allow read: if isAuthenticated();
 
-      // Users can create only their own profile.
-      // They can register only as SEEKER or EMPLOYER.
-      // ADMIN must be created/assigned manually.
       allow create: if isOwner(userId)
                     && request.resource.data.role in [
                       'SEEKER',
                       'EMPLOYER'
                     ];
 
-      // Users can update their own profile but cannot change their role.
-      // Admins can update any profile.
       allow update: if (
                       isOwner(userId)
                       && request.resource.data.role == resource.data.role
                     )
                     || isAdmin();
 
-      // Client-side deletion is not allowed.
       allow delete: if false;
     }
 
-
     // -------------------------------------------------------------------------
-    // COMPANIES COLLECTION
+    // COMPANIES
     // -------------------------------------------------------------------------
-
     match /companies/{companyId} {
 
-      // Company profiles can be viewed publicly.
       allow read: if true;
 
-      // Only employers can create a company profile,
-      // and the employerId must match the authenticated user.
       allow create: if isAuthenticated()
                     && getUserRole() == 'EMPLOYER'
                     && request.resource.data.employerId == request.auth.uid;
 
-      // Employers can update only their own company profile.
-      // Ownership cannot be transferred.
       allow update: if isAuthenticated()
                     && resource.data.employerId == request.auth.uid
                     && request.resource.data.employerId == request.auth.uid;
 
-      // Client-side deletion is not allowed.
       allow delete: if false;
     }
 
-
     // -------------------------------------------------------------------------
-    // JOBS COLLECTION
+    // JOBS
     // -------------------------------------------------------------------------
-
     match /jobs/{jobId} {
 
-      // Anyone can read ACTIVE jobs.
-      // Employers can read their own jobs even if DRAFT/CLOSED.
-      // Admins can read all jobs.
       allow read: if resource.data.status == 'ACTIVE'
                   || (
                     isAuthenticated()
@@ -100,15 +75,10 @@ service cloud.firestore {
                   )
                   || isAdmin();
 
-      // Only EMPLOYERs can create jobs.
-      // The job must belong to the authenticated employer.
       allow create: if isAuthenticated()
                     && getUserRole() == 'EMPLOYER'
                     && request.resource.data.employerId == request.auth.uid;
 
-      // Employers can update their own jobs.
-      // Ownership cannot be transferred.
-      // Admins can update any job.
       allow update: if (
                       isAuthenticated()
                       && resource.data.employerId == request.auth.uid
@@ -116,8 +86,6 @@ service cloud.firestore {
                     )
                     || isAdmin();
 
-      // Employers can delete their own jobs.
-      // Admins can delete any job.
       allow delete: if (
                       isAuthenticated()
                       && resource.data.employerId == request.auth.uid
@@ -125,16 +93,11 @@ service cloud.firestore {
                     || isAdmin();
     }
 
-
     // -------------------------------------------------------------------------
-    // APPLICATIONS COLLECTION
+    // APPLICATIONS
     // -------------------------------------------------------------------------
-
     match /applications/{applicationId} {
 
-      // A candidate can read their own applications.
-      // An employer can read applications belonging to their jobs.
-      // Admins can read all applications.
       allow read: if (
                     isAuthenticated()
                     && (
@@ -144,15 +107,8 @@ service cloud.firestore {
                   )
                   || isAdmin();
 
-      // Candidates can create applications only for themselves.
-      //
-      // Additional security checks:
-      // 1. User must be a SEEKER.
-      // 2. seekerId must match authenticated user.
-      // 3. Initial status must be "Applied".
-      // 4. Referenced job must exist.
-      // 5. employerId must match the actual job owner.
-      // 6. Job must currently be ACTIVE.
+      // Candidate can create an application only for themselves,
+      // only for an ACTIVE job, and initial status must be Applied.
       allow create: if isAuthenticated()
                     && getUserRole() == 'SEEKER'
                     && request.resource.data.seekerId == request.auth.uid
@@ -167,16 +123,8 @@ service cloud.firestore {
                       /databases/$(database)/documents/jobs/$(request.resource.data.jobId)
                     ).data.status == 'ACTIVE';
 
-      // Employers can update ONLY the application status.
-      //
-      // Valid application statuses:
-      // Applied
-      // Shortlisted
-      // Interview
-      // Selected
-      // Rejected
-      //
-      // Candidates cannot update applications.
+      // Employer can change ONLY status.
+      // Status must be one of the valid ApplicationStatus values.
       allow update: if isAuthenticated()
                     && resource.data.employerId == request.auth.uid
                     && request.resource.data.diff(resource.data)
@@ -190,26 +138,18 @@ service cloud.firestore {
                       'Rejected'
                     ];
 
-      // Client-side deletion is not allowed.
       allow delete: if false;
     }
 
-
     // -------------------------------------------------------------------------
-    // SAVED JOBS COLLECTION
+    // SAVED JOBS
     // -------------------------------------------------------------------------
-
     match /saved_jobs/{savedJobId} {
 
-      // Candidates can read only their own saved jobs.
       allow read: if isAuthenticated()
                   && resource.data.seekerId == request.auth.uid;
 
-      // Candidates can save jobs only for themselves.
-      //
-      // The job must:
-      // 1. Exist.
-      // 2. Currently be ACTIVE.
+      // Candidate can save only an ACTIVE job.
       allow create: if isAuthenticated()
                     && getUserRole() == 'SEEKER'
                     && request.resource.data.seekerId == request.auth.uid
@@ -220,10 +160,8 @@ service cloud.firestore {
                       /databases/$(database)/documents/jobs/$(request.resource.data.jobId)
                     ).data.status == 'ACTIVE';
 
-      // Saved jobs cannot be modified.
       allow update: if false;
 
-      // Candidates can remove only their own saved jobs.
       allow delete: if isAuthenticated()
                     && resource.data.seekerId == request.auth.uid;
     }

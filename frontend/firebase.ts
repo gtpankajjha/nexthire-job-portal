@@ -11,4 +11,4 @@ if (FIREBASE_CONFIG.apiKey === "REPLACE_WITH_YOUR_API_KEY") {
 const app = initializeApp(FIREBASE_CONFIG);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app);
+export const storage = getStorage(app, `gs://${FIREBASE_CONFIG.storageBucket}`);
