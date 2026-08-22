@@ -21,6 +21,11 @@ service cloud.firestore {
       return isAuthenticated() && getUserRole() == 'ADMIN';
     }
 
+    // Email delivery state is server-managed by Cloud Functions.
+    match /emailEvents/{eventId} {
+      allow read, write: if false;
+    }
+
     // -------------------------------------------------------------------------
     // USERS
     // -------------------------------------------------------------------------

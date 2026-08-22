@@ -12,6 +12,7 @@ node_modules/
 .env.test.local
 .env.production.local
 .env.*.local
+.secret.local
 
 # Allow example environment files
 !.env.example

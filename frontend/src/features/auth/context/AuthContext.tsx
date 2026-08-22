@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../../../firebase';
 import { User } from '../../../../types';
@@ -6,7 +6,7 @@ import { authService } from '../../../services/auth.service';
 
 interface AuthContextType {
   user: User | null;
-  loading: boolean;
+  authInitialized: boolean;
   login: (email: string, password?: string) => Promise<User>;
   register: (data: any, password?: string) => Promise<User>;
   logout: () => Promise<void>;
@@ -18,22 +18,39 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
+  const authRequestId = useRef(0);
+  const hasResolvedInitialAuth = useRef(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          const userProfile = await authService.getCurrentUser(firebaseUser.uid);
-          setUser(userProfile);
-        } catch (error) {
-          console.error("Error fetching user profile:", error);
-          setUser(null);
+      const requestId = ++authRequestId.current;
+
+      setUser(null);
+
+      if (!firebaseUser) {
+        if (!hasResolvedInitialAuth.current) {
+          hasResolvedInitialAuth.current = true;
+          setAuthInitialized(true);
         }
-      } else {
+        return;
+      }
+
+      try {
+        const userProfile = await authService.getCurrentUser(firebaseUser.uid);
+        if (requestId !== authRequestId.current) return;
+        setUser(userProfile);
+      } catch (error) {
+        if (requestId !== authRequestId.current) return;
+        console.error("Error fetching user profile:", error);
         setUser(null);
       }
-      setLoading(false);
+
+      if (requestId !== authRequestId.current) return;
+      if (!hasResolvedInitialAuth.current) {
+        hasResolvedInitialAuth.current = true;
+        setAuthInitialized(true);
+      }
     });
 
     return () => unsubscribe();
@@ -52,13 +69,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await authService.logout();
-    setUser(null);
+    try {
+      await authService.logout();
+    } finally {
+      setUser(null);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
-      {!loading && children}
+    <AuthContext.Provider value={{ user, authInitialized, login, register, logout }}>
+      {children}
     </AuthContext.Provider>
   );
 };

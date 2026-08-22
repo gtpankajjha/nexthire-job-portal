@@ -4,7 +4,7 @@ import { User, FileText, Bookmark, Upload, CheckCircle, Loader2 } from 'lucide-r
 import { Button, Input, Card, Badge, JobCard, useToast, Select, ResumeViewerButton } from '../../../../ui-components';
 import { DashboardLayout } from '../../../../layout';
 import { useAuth } from '../../auth/context/AuthContext';
-import { applicationService, savedJobService, authService, storageService } from '../../../../services';
+import { applicationService, savedJobService, userService, storageService } from '../../../../services';
 import { Application, Job, WorkMode } from '../../../../types';
 import { SeekerApplicationCard } from '../components/SeekerApplicationCard';
 
@@ -83,7 +83,7 @@ export const SeekerProfile: React.FC = () => {
         profileCompleted: isCompleted,
         profileCompletionPercentage: newPercentage
       };
-      await authService.updateUser(user.id, updates);
+      await userService.updateUser(user.id, updates);
 
       // 4. Update local React state
       setFormData(newFormData);
@@ -111,7 +111,7 @@ export const SeekerProfile: React.FC = () => {
         profileCompleted: completionPercentage >= 80,
         profileCompletionPercentage: completionPercentage
       };
-      await authService.updateUser(user.id, updates);
+      await userService.updateUser(user.id, updates);
       showToast('Profile updated successfully');
     } catch (error: any) {
       showToast(error.message, 'error');

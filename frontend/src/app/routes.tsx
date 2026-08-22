@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { UserRole } from '../../types';
 import { ProtectedRoute } from './guards/ProtectedRoute';
+import { GuestRoute } from './guards/GuestRoute';
 import { LoginPage, RegisterPage } from '../features/auth/pages';
 import { HomePage, SearchPage, JobDetailsPage } from '../features/jobs/pages';
 import { SeekerProfile, SeekerApplications, SeekerSavedJobs } from '../features/candidate/pages';
@@ -13,8 +14,8 @@ export const AppRoutes: React.FC = () => (
     <Route path="/" element={<HomePage />} />
     <Route path="/search" element={<SearchPage />} />
     <Route path="/jobs/:id" element={<JobDetailsPage />} />
-    <Route path="/login" element={<LoginPage />} />
-    <Route path="/register" element={<RegisterPage />} />
+    <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+    <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
 
     <Route path="/seeker/profile" element={<ProtectedRoute allowedRoles={[UserRole.SEEKER]}><SeekerProfile /></ProtectedRoute>} />
     <Route path="/seeker/applications" element={<ProtectedRoute allowedRoles={[UserRole.SEEKER]}><SeekerApplications /></ProtectedRoute>} />
